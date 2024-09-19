@@ -2,6 +2,6 @@ FROM ubuntu:22.04
 
 USER root
 
-RUN apt update && apt upgrade -y
+RUN apt-get update && apt-get upgrade -y
 
 CMD ["bash"]
