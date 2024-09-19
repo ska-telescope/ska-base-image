@@ -20,6 +20,10 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
+import sphinx_rtd_theme
+
+def setup(app):
+    app.add_css_file('css/custom.css')
 
 # -- General configuration ------------------------------------------------
 
@@ -30,9 +34,8 @@
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
+extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.napoleon',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
@@ -41,11 +44,11 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'myst_parser',
-]
+              'recommonmark'
+    ]
 
 # Add any paths that contain templates here, relative to this directory.
-# templates_path = []
+templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -57,9 +60,9 @@ source_suffix = ['.rst', '.md']
 master_doc = 'index'
 
 # General information about the project.
-project = 'SKA Tango Examples'
-copyright = '2018, Stewart Williams'
-author = 'Stewart Williams'
+project = 'SKA Base Image'
+copyright = '2024, SKA Observatory'
+author = 'System Team'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -94,7 +97,7 @@ todo_include_todos = True
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'ska_ser_sphinx_theme'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -102,16 +105,20 @@ html_theme = 'ska_ser_sphinx_theme'
 #
 # html_theme_options = {}
 html_context = {
+    'favicon': 'img/favicon.ico',
+    'logo': 'img/logo.jpg',
+    'theme_logo_only': True,
     'display_github': True,  # Integrate GitHub
     'github_user': 'ska-telescope',  # Username
     'github_repo': 'ska-tango-images',  # Repo name
     'github_version': 'master',  # Version
+    'conf_py_path': '/src/',  # Path in the checkout to the docs root
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = []
+html_static_path = ['_static']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -173,25 +180,5 @@ man_pages = [
      ['{{author}}'], 1)
 ]
 
-
-# -- Options for Texinfo output -------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-texinfo_documents = [
-    (master_doc, '{{project-name}}', '{{project-name}} Documentation',
-     '{{author}}', '{{project-name}}', 'One line description of project.',
-     'Miscellaneous'),
-]
-
-
-
-
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {"python": ("https://docs.python.org/3.10/", None)}
-
-nitpicky = True
-
-# Configuration for myst parser
-myst_heading_anchors = 3
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}

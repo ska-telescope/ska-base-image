@@ -3,14 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-SKA Tango Examples
-==================
+SKA TANGO Charts
+=================
 
-This project demonstrates how to structure an SKA project
-that provides some simple Tango devices coded in PyTango.
+This project defines a set of helm charts that are useful for TANGO control system development in a k8s context.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents
+   :caption: Contents:
 
-   README.md
+   README
+
