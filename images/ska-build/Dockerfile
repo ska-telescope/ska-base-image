@@ -1,4 +1,5 @@
-FROM ska-base:0.1.0
+ARG BASE_IMAGE="ska-base:0.1.0"
+FROM $BASE_IMAGE
 
 ENV POETRY_VERSION=1.8.3
 
