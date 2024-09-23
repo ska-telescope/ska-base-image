@@ -40,3 +40,4 @@ manifests.yaml
 .DS_Store
 
 /values.y*ml
+skao.metadata
