@@ -15,6 +15,37 @@ stages:
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
+.image_builder_template:
+  stage: build
+  tags:
+    - k8srunner
+  before_script:
+    - '[ -f .make/oci.mk ] || exit 1'
+    - 'make help | grep oci-build'
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+    - echo $CAR_OCI_REGISTRY_PASSWORD | docker login -u $CAR_OCI_REGISTRY_USERNAME --password-stdin $CAR_OCI_REGISTRY_HOST
+  script:
+    - echo "Incoming BUILD_IMAGE=${BUILD_IMAGE} BASE_IMAGE=${BASE_IMAGE}"
+    - |
+      if [[ -n "${BUILD_IMAGE}" ]]; then
+        IMG="${BUILD_IMAGE##*/}";
+        VERS=$(make show-version RELEASE_CONTEXT_DIR=images/${IMG});
+        export BUILD_IMAGE="${BUILD_IMAGE}:${VERS}";
+      fi;
+      if [[ -n "${BASE_IMAGE}" ]]; then
+        IMG="${BASE_IMAGE##*/}";
+        VERS=$(make show-version RELEASE_CONTEXT_DIR=images/${IMG});
+        export BASE_IMAGE="${BASE_IMAGE}:${VERS}";
+      fi;
+    - echo "Image dependencies set to BUILD_IMAGE=${BUILD_IMAGE} BASE_IMAGE=${BASE_IMAGE}"
+    - |
+      echo "Check/pulling ${OCI_IMAGE} image to build:";
+      export VERS=$(make show-version RELEASE_CONTEXT_DIR=images/${OCI_IMAGE});
+      export IMG=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/${OCI_IMAGE}:${VERS};
+      echo "Image to build: ${IMG}"; docker pull ${IMG} || true;
+    - make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BUILD_IMAGE --build-arg BASE_IMAGE "
+
+
 # Include CI templates
 include:
 # OCI Images
@@ -33,3 +64,37 @@ include:
 # changelog release page
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/release.gitlab-ci.yml'
+
+
+build-ska-base:
+  extends:
+  - .image_builder_template
+  variables:
+    OCI_IMAGE: ska-base
+
+build-ska-build:
+  dependencies:
+    - build-ska-base
+  extends:
+  - .image_builder_template
+  variables:
+    OCI_IMAGE: ska-build
+    BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base
+
+build-ska-python:
+  dependencies:
+    - build-ska-base
+  extends:
+  - .image_builder_template
+  variables:
+    OCI_IMAGE: ska-python
+    BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base
+
+build-ska-build-python:
+  dependencies:
+    - build-ska-build
+  extends:
+  - .image_builder_template
+  variables:
+    OCI_IMAGE: ska-build-python
+    BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build
