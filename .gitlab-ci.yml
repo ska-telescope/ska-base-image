@@ -15,6 +15,25 @@ stages:
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
+# Include CI templates
+include:
+# OCI Images
+# do a custom set of build and publish stages
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/oci-image.gitlab-ci.yml'
+
+# Docs pages
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/docs.gitlab-ci.yml'
+
+# .post step finalisers eg: badges
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/finaliser.gitlab-ci.yml'
+
+# changelog release page
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/release.gitlab-ci.yml'
+
 .image_builder_template:
   stage: build
   tags:
@@ -45,34 +64,17 @@ variables:
       echo "Image to build: ${IMG}"; docker pull ${IMG} || true;
     - make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BUILD_IMAGE --build-arg BASE_IMAGE "
 
+oci-image-build:
+  rules:
+  - when: never
 
-# Include CI templates
-include:
-# OCI Images
-# do a custom set of build and publish stages
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/oci-image.gitlab-ci.yml'
-
-# Docs pages
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/docs.gitlab-ci.yml'
-
-# .post step finalisers eg: badges
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/finaliser.gitlab-ci.yml'
-
-# changelog release page
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/release.gitlab-ci.yml'
-
-
-build-ska-base:
+oci-image-build-ska-base:
   extends:
   - .image_builder_template
   variables:
     OCI_IMAGE: ska-base
 
-build-ska-build:
+oci-image-build-ska-build:
   dependencies:
     - build-ska-base
   extends:
@@ -81,7 +83,7 @@ build-ska-build:
     OCI_IMAGE: ska-build
     BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base
 
-build-ska-python:
+oci-image-build-ska-python:
   dependencies:
     - build-ska-base
   extends:
@@ -90,7 +92,7 @@ build-ska-python:
     OCI_IMAGE: ska-python
     BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base
 
-build-ska-build-python:
+oci-image-build-ska-build-python:
   dependencies:
     - build-ska-build
   extends:
