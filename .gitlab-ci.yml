@@ -76,7 +76,7 @@ oci-image-build-ska-base:
 
 oci-image-build-ska-build:
   dependencies:
-    - build-ska-base
+    - oci-image-build-ska-base
   extends:
   - .image_builder_template
   variables:
@@ -85,7 +85,7 @@ oci-image-build-ska-build:
 
 oci-image-build-ska-python:
   dependencies:
-    - build-ska-base
+    - oci-image-build-ska-base
   extends:
   - .image_builder_template
   variables:
@@ -94,7 +94,7 @@ oci-image-build-ska-python:
 
 oci-image-build-ska-build-python:
   dependencies:
-    - build-ska-build
+    - oci-image-build-ska-base
   extends:
   - .image_builder_template
   variables:
