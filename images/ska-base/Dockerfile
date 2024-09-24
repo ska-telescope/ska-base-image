@@ -1,5 +1,4 @@
-ARG BASE_IMAGE="ubuntu:22.04"
-FROM $BASE_IMAGE
+FROM ubuntu:22.04
 
 LABEL int.skao.image.team="Systems Team" \
     int.skao.image.url="https://gitlab.com/ska-telescope/ska-base-image" \

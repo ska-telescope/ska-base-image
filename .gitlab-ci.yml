@@ -73,6 +73,7 @@ oci-image-build-ska-base:
   - .image_builder_template
   variables:
     OCI_IMAGE: ska-base
+    BASE_IMAGE: ubuntu:22.04
 
 oci-image-build-ska-build:
   dependencies:
