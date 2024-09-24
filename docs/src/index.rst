@@ -3,10 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-SKA TANGO Charts
-=================
+SKA Base Images
+===============
 
-This project defines a set of helm charts that are useful for TANGO control system development in a k8s context.
+This project defines a set of zero critical vulnerabilities base images.
 
 .. toctree::
    :maxdepth: 2
