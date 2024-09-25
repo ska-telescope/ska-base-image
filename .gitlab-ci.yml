@@ -109,7 +109,6 @@ test-ska-base:
   - ska-default
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA
   script:
-    - grep precise-security /etc/apt/sources.list > /etc/apt/secsrc.list
     - apt-get -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt-get --assume-no upgrade | grep "0 not upgraded."
   
 test-ska-build:
