@@ -1,0 +1,43 @@
+*.py[cod]
+*.egg-info
+*.eggs
+.ipynb_checkpoints
+
+build
+builds
+dist
+.cache
+__pycache__
+Chart.lock
+
+htmlcov
+.coverage
+coverage.xml
+.pytest_cache
+
+docs/_build
+docs/apidocs
+
+# ide
+.idea
+.eclipse
+
+# Private Makefile values - optional include
+PrivateRules.mak
+
+MANIFEST.skao.int
+patch-metadata.sh
+# Ignore legacy dependency and release systems
+setup.py
+setup.cfg
+requirements*
+tests/requirements*
+pytest-logs.txt
+.devcontainer
+.vscode
+manifests.yaml
+.DS_Store
+.DS_Store
+
+/values.y*ml
+skao.metadata

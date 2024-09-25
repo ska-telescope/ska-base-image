@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "ska-base-image"
+version = "0.1.0"
+description = ""
+authors = ["Matteo Di Carlo <matteo.dicarlo@inaf.it>"]
+readme = "README.md"
+
+[[tool.poetry.source]]
+name = 'ska-nexus'
+url = 'https://artefact.skao.int/repository/pypi-internal/simple'
+
+[[tool.poetry.source]]
+name = "PyPI"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[tool.poetry.group.docs.dependencies]
+myst-parser = "^3.0.0"
+ska-ser-sphinx-theme = "^0.1.2"
+Sphinx = "^7.3.0"
+recommonmark = "^0.7.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
