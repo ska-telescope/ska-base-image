@@ -14,6 +14,7 @@ stages:
 # Standardised included jobs
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
+  OCI_BUILD_ADDITIONAL_TAGS: $CI_COMMIT_SHORT_SHA
 
 # Include CI templates
 include:
@@ -64,6 +65,7 @@ include:
       echo "Image to build: ${IMG}"; docker pull ${IMG} || true;
     - make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BUILD_IMAGE --build-arg BASE_IMAGE "
 
+
 oci-image-build:
   rules:
   - when: never
@@ -100,3 +102,23 @@ oci-image-build-ska-build-python:
   variables:
     OCI_IMAGE: ska-build-python
     BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build
+
+test-ska-base:
+  stage: test
+  tags:
+  - ska-default
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA
+  script:
+    - grep precise-security /etc/apt/sources.list > /etc/apt/secsrc.list
+    - apt-get -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt-get --assume-no upgrade | grep "0 not upgraded."
+  
+test-ska-build:
+  stage: test
+  tags:
+  - ska-default
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build:$CI_COMMIT_SHORT_SHA
+  script:
+    - python3 --version
+    - pip help
+    - g++ --version
+    - python3-config --help
