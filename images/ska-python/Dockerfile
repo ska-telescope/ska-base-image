@@ -10,4 +10,6 @@ LABEL int.skao.image.team="Systems Team" \
 
 COPY skao.metadata /etc/skao.metadata 
 
+RUN apt-get update && apt-get install -y python3
+
 CMD ["bash"]

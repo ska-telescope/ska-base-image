@@ -12,6 +12,8 @@ RUN curl -k https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pi
 
 RUN pipx ensurepath
 RUN pipx install poetry==1.8.3
-COPY skao.metadata /etc/skao.metadata 
+ENV PATH=$PATH:/root/.local/bin
+
+COPY skao.metadata /etc/skao.metadata
 
 CMD ["bash"]
