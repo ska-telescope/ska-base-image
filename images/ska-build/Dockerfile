@@ -7,7 +7,7 @@ LABEL int.skao.image.team="Systems Team" \
 
 ENV POETRY_VERSION=1.8.3
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential pipx libffi-dev python3-dev curl
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential pipx libffi-dev python3-dev curl python-is-python3
 RUN curl -k https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py && rm get-pip.py
 
 RUN pipx install poetry==1.8.3
