@@ -9,6 +9,8 @@ USER root
 
 RUN apt-get update && apt-get upgrade -y
 
+RUN apt-get install -y --no-install-recommends ca-certificates
+
 COPY skao.metadata /etc/skao.metadata 
 
 CMD ["bash"]
