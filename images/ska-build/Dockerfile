@@ -2,7 +2,7 @@ ARG BASE_IMAGE="ska-base:0.1.1"
 FROM $BASE_IMAGE
 
 LABEL int.skao.image.team="Systems Team" \
-    int.skao.image.url="https://gitlab.com/ska-telescope/ska-base-image" \
+    int.skao.image.url="https://gitlab.com/ska-telescope/ska-base-images" \
     int.skao.image.source="images/ska-build/Dockerfile"
 
 ENV POETRY_VERSION=1.8.3
