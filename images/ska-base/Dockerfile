@@ -7,9 +7,11 @@ LABEL int.skao.image.team="Systems Team" \
 
 USER root
 
-RUN apt-get update && apt-get upgrade -y
-
-RUN apt-get install -y --no-install-recommends ca-certificates
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    apt-get clean && \
+    rm -fr /var/lib/apt/lists/*
 
 COPY skao.metadata /etc/skao.metadata 
 
