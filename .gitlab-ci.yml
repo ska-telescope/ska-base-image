@@ -15,33 +15,37 @@ stages:
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
   OCI_BUILD_ADDITIONAL_TAGS: $CI_COMMIT_SHORT_SHA
+  UBUNTU_VERSION: "2204"
+  UBUNTU_DISTRO: jammy
+
+default:
+  tags:
+    - ska-k8s
 
 # Include CI templates
 include:
-# OCI Images
-# do a custom set of build and publish stages
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/oci-image.gitlab-ci.yml'
+  # OCI Images
+  # do a custom set of build and publish stages
+  - project: "ska-telescope/templates-repository"
+    file: "gitlab-ci/includes/oci-image.gitlab-ci.yml"
 
-# Docs pages
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/docs.gitlab-ci.yml'
+  # Docs pages
+  - project: "ska-telescope/templates-repository"
+    file: "gitlab-ci/includes/docs.gitlab-ci.yml"
 
-# .post step finalisers eg: badges
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/finaliser.gitlab-ci.yml'
+  # .post step finalisers eg: badges
+  - project: "ska-telescope/templates-repository"
+    file: "gitlab-ci/includes/finaliser.gitlab-ci.yml"
 
-# changelog release page
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/release.gitlab-ci.yml'
+  # changelog release page
+  - project: "ska-telescope/templates-repository"
+    file: "gitlab-ci/includes/release.gitlab-ci.yml"
 
 .image_builder_template:
   stage: build
-  tags:
-    - k8srunner
   before_script:
-    - '[ -f .make/oci.mk ] || exit 1'
-    - 'make help | grep oci-build'
+    - "[ -f .make/oci.mk ] || exit 1"
+    - "make help | grep oci-build"
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
     - echo $CAR_OCI_REGISTRY_PASSWORD | docker login -u $CAR_OCI_REGISTRY_USERNAME --password-stdin $CAR_OCI_REGISTRY_HOST
   script:
@@ -65,14 +69,13 @@ include:
       echo "Image to build: ${IMG}"; docker pull ${IMG} || true;
     - make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BUILD_IMAGE --build-arg BASE_IMAGE "
 
-
 oci-image-build:
   rules:
-  - when: never
+    - when: never
 
 oci-image-build-ska-base:
   extends:
-  - .image_builder_template
+    - .image_builder_template
   variables:
     OCI_IMAGE: ska-base
 
@@ -80,7 +83,7 @@ oci-image-build-ska-build:
   dependencies:
     - oci-image-build-ska-base
   extends:
-  - .image_builder_template
+    - .image_builder_template
   variables:
     OCI_IMAGE: ska-build
     BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base
@@ -89,7 +92,7 @@ oci-image-build-ska-python:
   dependencies:
     - oci-image-build-ska-base
   extends:
-  - .image_builder_template
+    - .image_builder_template
   variables:
     OCI_IMAGE: ska-python
     BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base
@@ -98,7 +101,7 @@ oci-image-build-ska-build-python:
   dependencies:
     - oci-image-build-ska-build
   extends:
-  - .image_builder_template
+    - .image_builder_template
   variables:
     OCI_IMAGE: ska-build-python
     BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build
@@ -106,18 +109,54 @@ oci-image-build-ska-build-python:
 test-ska-base:
   stage: test
   tags:
-  - ska-default
+    - ska-default
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA
   script:
     - apt-get -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt-get --assume-no upgrade | grep "0 not upgraded."
-  
+
 test-ska-build:
   stage: test
-  tags:
-  - ska-default
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build:$CI_COMMIT_SHORT_SHA
   script:
     - python3 --version
     - pip help
     - g++ --version
     - python3-config --help
+
+# Usin natively on the image as it doesn't understand that is a container and checks Kernel "based"
+# vulnerabilites, which gives us extra information on the Host as well
+oval-check-ska-base:
+  stage: scan
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA
+  script: |
+    apt update && \
+    apt install -y curl libopenscap8 bzip2 unzip && \
+    curl -L "https://security-metadata.canonical.com/oval/com.ubuntu.${UBUNTU_DISTRO}.usn.oval.xml.bz2" -o oval.xml.bz2 && \
+    bunzip2 oval.xml.bz2
+
+    oscap oval eval --report oval.html oval.xml || true
+  artifacts:
+    paths:
+      - "./*.html"
+
+# Using Alpine to use the latest OpenSCAP version. This does not throw false positives in terms of detecting
+# it as a container
+ssg-check-ska-base:
+  stage: scan
+  image: alpine:3.21
+  script: |
+    export TARGET="${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA"
+
+    apk update && apk add bash curl docker openscap-docker unzip && \
+    docker pull $TARGET && \
+    CAC_LATEST_VERSION=$(curl https://github.com/ComplianceAsCode/content/releases/latest --write-out '%{redirect_url}' | sed "s/.*v//") && \
+    curl -L "https://github.com/ComplianceAsCode/content/releases/download/v${CAC_LATEST_VERSION}/scap-security-guide-${CAC_LATEST_VERSION}.zip" -o ssg.zip && \
+    unzip -j ssg.zip "scap-security-guide-${CAC_LATEST_VERSION}/ssg-ubuntu${UBUNTU_VERSION}-ds.xml" && \
+    mv "ssg-ubuntu${UBUNTU_VERSION}-ds.xml" ds.xml
+
+    oscap-docker image "$TARGET" xccdf eval --report standard_profile.html --profile xccdf_org.ssgproject.content_profile_standard ds.xml || true
+    oscap-docker image "$TARGET" xccdf eval --report cis_level2_profile.html --profile xccdf_org.ssgproject.content_profile_cis_level2_server ds.xml || true
+    oscap-docker image "$TARGET" xccdf eval --report stig_profile.html --profile xccdf_org.ssgproject.content_profile_stig ds.xml || true
+  artifacts:
+    paths:
+      - "./*.html"
