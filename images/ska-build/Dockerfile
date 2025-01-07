@@ -1,4 +1,4 @@
-ARG BASE_IMAGE="ska-base:0.1.1"
+ARG BASE_IMAGE="ska-base:0.1.3"
 FROM $BASE_IMAGE
 
 LABEL int.skao.image.team="Systems Team" \
