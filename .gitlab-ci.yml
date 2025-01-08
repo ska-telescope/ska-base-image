@@ -14,10 +14,11 @@ stages:
 # Standardised included jobs
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  OCI_BUILD_ADDITIONAL_TAGS: $CI_COMMIT_SHORT_SHA
+  OCI_BUILD_ADDITIONAL_TAGS: ${CI_COMMIT_SHORT_SHA}
   UBUNTU_VERSION: "2204"
   UBUNTU_DISTRO: jammy
-  CS_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA
+  CS_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:${CI_COMMIT_SHORT_SHA}
+  DOCS_RTD_PROJECT_SLUG: ska-telescope-ska-base-image
 
 default:
   tags:
@@ -26,7 +27,6 @@ default:
 # Include CI templates
 include:
   # OCI Images
-  # do a custom set of build and publish stages
   - project: "ska-telescope/templates-repository"
     file: "gitlab-ci/includes/oci-image.gitlab-ci.yml"
 
@@ -48,27 +48,19 @@ include:
     - "[ -f .make/oci.mk ] || exit 1"
     - "make help | grep oci-build"
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
-    - echo $CAR_OCI_REGISTRY_PASSWORD | docker login -u $CAR_OCI_REGISTRY_USERNAME --password-stdin $CAR_OCI_REGISTRY_HOST
-  script:
-    - echo "Incoming BUILD_IMAGE=${BUILD_IMAGE} BASE_IMAGE=${BASE_IMAGE}"
-    - |
-      if [[ -n "${BUILD_IMAGE}" ]]; then
-        IMG="${BUILD_IMAGE##*/}";
-        VERS=$(make show-version RELEASE_CONTEXT_DIR=images/${IMG});
-        export BUILD_IMAGE="${BUILD_IMAGE}:${VERS}";
-      fi;
-      if [[ -n "${BASE_IMAGE}" ]]; then
-        IMG="${BASE_IMAGE##*/}";
-        VERS=$(make show-version RELEASE_CONTEXT_DIR=images/${IMG});
-        export BASE_IMAGE="${BASE_IMAGE}:${VERS}";
-      fi;
-    - echo "Image dependencies set to BUILD_IMAGE=${BUILD_IMAGE} BASE_IMAGE=${BASE_IMAGE}"
-    - |
-      echo "Check/pulling ${OCI_IMAGE} image to build:";
-      export VERS=$(make show-version RELEASE_CONTEXT_DIR=images/${OCI_IMAGE});
-      export IMG=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/${OCI_IMAGE}:${VERS};
-      echo "Image to build: ${IMG}"; docker pull ${IMG} || true;
-    - make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BUILD_IMAGE --build-arg BASE_IMAGE "
+    #- echo $CAR_OCI_REGISTRY_PASSWORD | docker login -u $CAR_OCI_REGISTRY_USERNAME --password-stdin $CAR_OCI_REGISTRY_HOST
+  script: |
+      # 
+      if [[ -n "${BASE_IMAGE_NAME}" ]]; then
+        export BASE_IMAGE_REGISTRY=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/${BASE_IMAGE_NAME}
+        export BASE_IMAGE=$BASE_IMAGE_REGISTRY
+        echo "Using BASE_IMAGE=${BASE_IMAGE_REGISTRY}"
+        VERSION=$(make show-version RELEASE_CONTEXT_DIR=images/${BASE_IMAGE_NAME})-dev.c${CI_COMMIT_SHORT_SHA}
+        export BASE_IMAGE="${BASE_IMAGE}:${VERSION}"
+      fi
+
+      echo "Image dependencies set to BASE_IMAGE=${BASE_IMAGE}"
+      make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BASE_IMAGE=${BASE_IMAGE}"
 
 oci-image-build:
   rules:
@@ -81,43 +73,43 @@ oci-image-build-ska-base:
     OCI_IMAGE: ska-base
 
 oci-image-build-ska-build:
-  dependencies:
+  needs:
     - oci-image-build-ska-base
   extends:
     - .image_builder_template
   variables:
     OCI_IMAGE: ska-build
-    BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base
+    BASE_IMAGE_NAME: ska-base
 
 oci-image-build-ska-python:
-  dependencies:
+  needs:
     - oci-image-build-ska-base
   extends:
     - .image_builder_template
   variables:
     OCI_IMAGE: ska-python
-    BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base
+    BASE_IMAGE_NAME: ska-base
 
 oci-image-build-ska-build-python:
-  dependencies:
+  needs:
     - oci-image-build-ska-build
   extends:
     - .image_builder_template
   variables:
     OCI_IMAGE: ska-build-python
-    BASE_IMAGE: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build
+    BASE_IMAGE_NAME: ska-build
 
 test-ska-base:
   stage: test
   tags:
     - ska-default
-  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:${CI_COMMIT_SHORT_SHA}
   script:
     - apt-get -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt-get --assume-no upgrade | grep "0 not upgraded."
 
 test-ska-build:
   stage: test
-  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build:$CI_COMMIT_SHORT_SHA
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build:${CI_COMMIT_SHORT_SHA}
   script:
     - python3 --version
     - pip help
@@ -146,7 +138,7 @@ ssg-check-ska-base:
   stage: scan
   image: alpine:3.21
   script: |
-    export TARGET="${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA"
+    export TARGET="${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:${CI_COMMIT_SHORT_SHA}"
 
     apk update && apk add bash curl docker openscap-docker unzip && \
     docker pull $TARGET && \
