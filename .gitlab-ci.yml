@@ -10,6 +10,7 @@ stages:
   - pages
   - publish
   - scan
+  - schedule
 
 # Standardised included jobs
 variables:
@@ -42,7 +43,18 @@ include:
   - project: "ska-telescope/templates-repository"
     file: "gitlab-ci/includes/release.gitlab-ci.yml"
 
+.override-jobs-for-schedule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule"'
+      when: always
+
+.override-jobs-for-schedule:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule"'
+      when: always
+
 .image_builder_template:
+  extends: .override-jobs-for-schedule
   stage: build
   before_script:
     - "[ -f .make/oci.mk ] || exit 1"
@@ -104,12 +116,15 @@ test-ska-base:
   tags:
     - ska-default
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:${CI_COMMIT_SHORT_SHA}
+  extends: .override-jobs-for-schedule
   script:
     - apt-get -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt-get --assume-no upgrade | grep "0 not upgraded."
 
 test-ska-build:
   stage: test
-  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build:${CI_COMMIT_SHORT_SHA}
+  tags:
+  - ska-default
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build:$CI_COMMIT_SHORT_SHA
   script:
     - python3 --version
     - pip help
@@ -169,3 +184,12 @@ docs-build:
   script:
     - cp -r build/reports/. docs/src/reports/_static
     - make docs-build html
+
+
+deprecate-images:
+  stage: schedule
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  script:
+    - pip install requests
+    - python scripts/deprecate_harbor_base_images.py
