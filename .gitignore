@@ -41,3 +41,5 @@ manifests.yaml
 
 /values.y*ml
 skao.metadata
+poetry.toml
+docs/src/reports/_static/*.html

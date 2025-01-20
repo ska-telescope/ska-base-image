@@ -21,9 +21,9 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 import sphinx_rtd_theme
+import os
 
-def setup(app):
-    app.add_css_file('css/custom.css')
+on_gitlab = (os.environ.get('GITLAB_CI', "false").lower() == 'true')
 
 # -- General configuration ------------------------------------------------
 
@@ -36,16 +36,15 @@ def setup(app):
 # ones.
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.ifconfig',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
-              'recommonmark'
-    ]
+              'sphinx.ext.doctest',
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.todo',
+              'sphinx.ext.coverage',
+              'sphinx.ext.mathjax',
+              'sphinx.ext.ifconfig',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.githubpages',
+              'myst_parser']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -84,6 +83,8 @@ language = 'En-en'
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = []
+if not on_gitlab:
+    exclude_patterns.append("reports/*")
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -97,28 +98,36 @@ todo_include_todos = True
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'ska_ser_sphinx_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    #'logo_only' : False,
+    #'logo_only' : 'ska_logo.jpg',
+    #'logo' : 'ska_logo.jpg',
+}
+
 html_context = {
-    'favicon': 'img/favicon.ico',
-    'logo': 'img/logo.jpg',
-    'theme_logo_only': True,
-    'display_github': True,  # Integrate GitHub
-    'github_user': 'ska-telescope',  # Username
-    'github_repo': 'ska-tango-images',  # Repo name
-    'github_version': 'master',  # Version
-    'conf_py_path': '/src/',  # Path in the checkout to the docs root
+    "display_gitlab": True,  # Integrate Gitlab
+    "gitlab_user": "ska-telescope",  # Username
+    "gitlab_repo": "templates/ska-python-skeleton",  # Repo name with subgroup of needed
+    "gitlab_version": "master",  # Version
+    "conf_py_path": "/docs/src/"  # Path in the checkout to the docs root
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_css_files = [
+    'css/custom.css',
+]
+if on_gitlab:
+    html_css_files.append('css/wide_page.css')
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -139,7 +148,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-# htmlhelp_basename = 'skeletondoc'
+htmlhelp_basename = '{{project-name}}doc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -179,6 +188,39 @@ man_pages = [
     (master_doc, '{{project-name}}', '{{project-name}} Documentation',
      ['{{author}}'], 1)
 ]
+
+# -- Options for Texinfo output -------------------------------------------
+
+# Grouping the document tree into Texinfo files. List of tuples
+# (source start file, target name, title, author,
+#  dir menu entry, description, category)
+texinfo_documents = [
+    (master_doc, '{{project-name}}', '{{project-name}} Documentation',
+     author, '{{project-name}}', 'SKA Base Images',
+     'Miscellaneous'),
+]
+
+
+
+# -- Options for Epub output ----------------------------------------------
+
+# Bibliographic Dublin Core info.
+epub_title = project
+epub_author = author
+epub_publisher = author
+epub_copyright = copyright
+
+# The unique identifier of the text. This can be a ISBN number
+# or the project homepage.
+#
+# epub_identifier = ''
+
+# A unique identification for the text.
+#
+# epub_uid = ''
+
+# A list of files that should not be packed into the epub file.
+epub_exclude_files = ['search.html']
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}

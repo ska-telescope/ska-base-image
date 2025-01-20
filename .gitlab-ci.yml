@@ -119,7 +119,9 @@ test-ska-build:
 # Usin natively on the image as it doesn't understand that is a container and checks Kernel "based"
 # vulnerabilites, which gives us extra information on the Host as well
 oval-check-ska-base:
-  stage: scan
+  stage: build
+  needs:
+    - oci-image-build-ska-base
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA
   script: |
     apt update && \
@@ -127,15 +129,18 @@ oval-check-ska-base:
     curl -L "https://security-metadata.canonical.com/oval/com.ubuntu.${UBUNTU_DISTRO}.usn.oval.xml.bz2" -o oval.xml.bz2 && \
     bunzip2 oval.xml.bz2
 
-    oscap oval eval --report oval.html oval.xml || true
+    mkdir -p build/reports
+    oscap oval eval --report build/reports/oval.html oval.xml || true
   artifacts:
     paths:
-      - "./*.html"
+      - "build/reports/*.html"
 
 # Using Alpine to use the latest OpenSCAP version. This does not throw false positives in terms of detecting
 # it as a container
 ssg-check-ska-base:
-  stage: scan
+  stage: build
+  needs:
+    - oci-image-build-ska-base
   image: alpine:3.21
   script: |
     export TARGET="${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:${CI_COMMIT_SHORT_SHA}"
@@ -147,9 +152,20 @@ ssg-check-ska-base:
     unzip -j ssg.zip "scap-security-guide-${CAC_LATEST_VERSION}/ssg-ubuntu${UBUNTU_VERSION}-ds.xml" && \
     mv "ssg-ubuntu${UBUNTU_VERSION}-ds.xml" ds.xml
 
-    oscap-docker image "$TARGET" xccdf eval --report standard_profile.html --profile xccdf_org.ssgproject.content_profile_standard ds.xml || true
-    oscap-docker image "$TARGET" xccdf eval --report cis_level2_profile.html --profile xccdf_org.ssgproject.content_profile_cis_level2_server ds.xml || true
-    oscap-docker image "$TARGET" xccdf eval --report stig_profile.html --profile xccdf_org.ssgproject.content_profile_stig ds.xml || true
+    mkdir -p build/reports
+    oscap-docker image "$TARGET" xccdf eval --report build/reports/standard_profile.html --profile xccdf_org.ssgproject.content_profile_standard ds.xml || true
+    oscap-docker image "$TARGET" xccdf eval --report build/reports/cis_level2_profile.html --profile xccdf_org.ssgproject.content_profile_cis_level2_server ds.xml || true
+    oscap-docker image "$TARGET" xccdf eval --report build/reports/stig_profile.html --profile xccdf_org.ssgproject.content_profile_stig ds.xml || true
   artifacts:
     paths:
-      - "./*.html"
+      - "build/reports/*.html"
+
+docs-build:
+  variables:
+    DOCS_SPHINXOPTS: "-t on_gitlab"
+  needs:
+    - oval-check-ska-base
+    - ssg-check-ska-base
+  script:
+    - cp -r build/reports/. docs/src/reports/_static
+    - make docs-build html
