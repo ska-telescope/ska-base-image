@@ -45,16 +45,17 @@ include:
 
 .override-jobs-for-schedule:
   rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule"'
-      when: always
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: always
 
 .override-jobs-for-schedule:
   rules:
-    - if: '$CI_PIPELINE_SOURCE != "schedule"'
-      when: always
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: always
 
 .image_builder_template:
-  extends: .override-jobs-for-schedule
   stage: build
   before_script:
     - "[ -f .make/oci.mk ] || exit 1"
@@ -72,7 +73,31 @@ include:
       fi
 
       echo "Image dependencies set to BASE_IMAGE=${BASE_IMAGE}"
-      make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BASE_IMAGE=${BASE_IMAGE}"
+      make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BASE_IMAGE=${BASE_IMAGE}"     
+
+oci-image-lint:
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+
+docs-build:
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+
+docs-build-rtd:
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+
+container_scanning:
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+
+gemnasium-python-dependency_scanning:
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+
+create-ci-metrics:
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]       
 
 oci-image-build:
   rules:
@@ -80,7 +105,9 @@ oci-image-build:
 
 oci-image-build-ska-base:
   extends:
-    - .image_builder_template
+  - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
   variables:
     OCI_IMAGE: ska-base
 
@@ -88,7 +115,9 @@ oci-image-build-ska-build:
   needs:
     - oci-image-build-ska-base
   extends:
-    - .image_builder_template
+  - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
   variables:
     OCI_IMAGE: ska-build
     BASE_IMAGE_NAME: ska-base
@@ -97,7 +126,9 @@ oci-image-build-ska-python:
   needs:
     - oci-image-build-ska-base
   extends:
-    - .image_builder_template
+  - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
   variables:
     OCI_IMAGE: ska-python
     BASE_IMAGE_NAME: ska-base
@@ -106,7 +137,9 @@ oci-image-build-ska-build-python:
   needs:
     - oci-image-build-ska-build
   extends:
-    - .image_builder_template
+  - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
   variables:
     OCI_IMAGE: ska-build-python
     BASE_IMAGE_NAME: ska-build
@@ -116,7 +149,8 @@ test-ska-base:
   tags:
     - ska-default
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:${CI_COMMIT_SHORT_SHA}
-  extends: .override-jobs-for-schedule
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
   script:
     - apt-get -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt-get --assume-no upgrade | grep "0 not upgraded."
 
@@ -125,6 +159,8 @@ test-ska-build:
   tags:
   - ska-default
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build:$CI_COMMIT_SHORT_SHA
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
   script:
     - python3 --version
     - pip help
@@ -191,5 +227,5 @@ deprecate-images:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
   script:
-    - pip install requests
-    - python scripts/deprecate_harbor_base_images.py
+    - poetry install
+    - poetry run python scripts/deprecate_harbor_base_images.py

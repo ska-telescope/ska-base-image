@@ -1,7 +1,26 @@
-import requests
-from datetime import datetime, timedelta
+"""
+This script manages the deprecation of base images in a Harbor repository.
+
+Main functionality:
+- Identifies artefacts older than 6 months.
+- Copies them to a designated "deprecated" repository.
+- Deletes them from the original repository.
+
+Required Environment Variables:
+- HARBOR_URL: Base URL for the Harbor API.
+- HARBOR_SOURCE_PROJECT: The name of the project containing the images.
+- HARBOR_DEPRECATION_PROJECT: The name of the project where images will be deprecated to.
+- ROBOT_DEPRECATION_ACCOUNT_USERNAME: Username for authentication.
+- ROBOT_DEPRECATION_ACCOUNT_SECRET: Token for authentication.
+- CONFIG: A JSON-formatted string that defines the deprecation time span (in days) and
+the list of base images to be deprecated.
+"""
+
 import logging
 import os
+import requests
+import json
+from datetime import datetime, timedelta
 
 logging.basicConfig(
     level=logging.INFO,
@@ -10,116 +29,119 @@ logging.basicConfig(
 )
 
 HARBOR_URL = os.getenv("HARBOR_URL")
-PROJECT = os.getenv("HARBOR_DEPRECATION_PROJECT")
-DEST_REPO = os.getenv("HARBOR_DEPRECATION_REPO")
+SOURCE_PROJECT = os.getenv("HARBOR_SOURCE_PROJECT")
+DEST_PROJECT = os.getenv("HARBOR_DEPRECATED_PROJECT")
 ROBOT_DEPRECATION_ACCOUNT_USERNAME = os.getenv("ROBOT_DEPRECATION_ACCOUNT_USERNAME")
 ROBOT_DEPRECATION_ACCOUNT_SECRET = os.getenv("ROBOT_DEPRECATION_ACCOUNT_SECRET")
+CONFIG = os.getenv("DEPRECATION_CONFIG")
+if CONFIG is None:
+  config = {
+    "timedelta_days": 180, # 6 months in days
+    "images": ["ska-base", "ska-build", "ska-python", "ska-build-python"]
+  }
+else:
+  config = json.loads(CONFIG)
+DEPRECATION_PERIOD = datetime.now() - timedelta(config.get("timedelta_days"))
+IMAGES = config.get("images")
 
-# Time threshold for deprecation
-SIX_MONTHS_AGO = datetime.now() - timedelta(days=180)
+def list_artefacts(username, password, repo):
+    """List all artefacts in the deprecated repository.
 
-# List artifacts in the source repository
-def list_artifacts(username, password, repo):
-    logging.info(f"Listing artifacts in {PROJECT}/{repo}...")
-    url = f"{HARBOR_URL}/api/v2.0/projects/{PROJECT}/repositories/{repo}/artifacts"
+    Args:
+        username (str): Harbor username for authentication.
+        password (str): Harbor password for authentication.
+        repo (str): Repository name of artefacts to deprecated.
+
+    Returns:
+        list: A list of artefacts (dictionaries) from the repository.
+    """
+    logging.info(f"Listing artefacts in {SOURCE_PROJECT}/{repo}...")
+    url = f"{HARBOR_URL}/api/v2.0/projects/{SOURCE_PROJECT}/repositories/{repo}/artifacts"
     response = requests.get(url, auth=(username, password))
     if response.status_code == 200:
         return response.json()
     else:
-        logging.error(f"Failed to list artifacts: {response.text}")
+        logging.error(f"Failed to list artefacts: {response.text}")
         response.raise_for_status()
 
-# Copy artifact to the deprecated repository
-def copy_artifact(username, password, repo, digest):
-    logging.info(f"Copying artifact {digest} to {PROJECT}/{DEST_REPO}...")
-    url = f"{HARBOR_URL}/api/v2.0/projects/{PROJECT}/repositories/{DEST_REPO}/artifacts?from={PROJECT}/{repo}@{digest}"
+def copy_artefact(username, password, repo, digest):
+    """Copy the artefact to the Deprecated project.
+
+    Args:
+        username (str): Harbor username for authentication.
+        password (str): Harbor password for authentication.
+        repo (str): Repository name of artefacts to deprecated.
+        digest (str): Digest of the artefact to copy.
+
+    Returns:
+        bool: True if the copy was successful, False otherwise.
+    """
+    logging.info(f"Copying artefact {digest} to {DEST_PROJECT}/{repo}...")
+    url = f"{HARBOR_URL}/api/v2.0/projects/{DEST_PROJECT}/repositories/{repo}/artifacts?from={SOURCE_PROJECT}/{repo}@{digest}"
     response = requests.post(url, auth=(username, password))
     if response.status_code == 201:
-        logging.info(f"Successfully copied artifact {digest}.")
+        logging.info(f"Successfully copied artefact {digest}.")
         return True
     else:
-        logging.error(f"Failed to copy artifact {digest}: {response.text}")
+        logging.error(f"Failed to copy artefact {digest}: {response.text}")
         return False
 
-# Add new tag to artifact and remove old tag
-def add_new_tag(username, password, repo, digest, artifact):
-    # Update the "name" key in each tag dictionary
-    tags = artifact.get("tags", [])
-    for tag in tags:
-        old_tag_name = tag["name"]
-        new_tag_name = f"{repo}-{tag['name']}"
+def delete_artefact(username, password, repo, digest):
+    """Delete artefact from the source repository.
 
-         # Update the "name" field in the tag dictionary
-        tag["name"] = new_tag_name        
-        
-        # Add new tag
-        logging.info(f"Adding new tag '{new_tag_name}':\n {tag}\n to artifact {digest}...")
-        add_url = f"{HARBOR_URL}/api/v2.0/projects/{PROJECT}/repositories/{DEST_REPO}/artifacts/{digest}/tags/"
-        payload = tag
-        response = requests.post(add_url, json=payload, auth=(username, password))
-        if response.status_code == 201:
-            logging.info(f"Successfully added new tag '{new_tag_name}' to artifact {digest}.")
-        else:
-            logging.error(f"Failed to add new tag '{new_tag_name}' to artifact {digest}: {response.text}")
-            return False
+    Args:
+        username (str): Harbor username for authentication.
+        password (str): Harbor password for authentication.
+        repo (str): Repository name of artefacts to deprecated.
+        digest (str): Digest of the artefact to delete.
 
-        # Remove old tag
-        logging.info(f"Removing old tag '{old_tag_name}' from artifact {digest}...")
-        delete_url = f"{HARBOR_URL}/api/v2.0/projects/{PROJECT}/repositories/{DEST_REPO}/artifacts/{digest}/tags/{old_tag_name}"
-        response = requests.delete(delete_url, auth=(username, password))
-        if response.status_code == 200:
-            logging.info(f"Successfully deleted old tag '{old_tag_name}' from artifact {digest}.")
-        else:
-            logging.error(f"Failed to delete old tag '{old_tag_name}' from artifact {digest}: {response.text}")
-            return False
-    return True
-
-def delete_artifact(username, password, repo, digest):
-    logging.info(f"Deleting artifact {digest} from {PROJECT}/{repo}...")
-    url = f"{HARBOR_URL}/api/v2.0/projects/{PROJECT}/repositories/{repo}/artifacts/{digest}"
+    Returns:
+        bool: True if the deletion was successful, False otherwise.
+    """
+    logging.info(f"Deleting artefact {digest} from {SOURCE_PROJECT}/{repo}...")
+    url = f"{HARBOR_URL}/api/v2.0/projects/{SOURCE_PROJECT}/repositories/{repo}/artifacts/{digest}"
     response = requests.delete(url, auth=(username, password))
     if response.status_code == 200:
-        logging.info(f"Successfully deleted artifact {digest}.")
+        logging.info(f"Successfully deleted artefact {digest}.")
         return True
     else:
-        logging.error(f"Failed to delete artifact {digest}: {response.text}")
+        logging.error(f"Failed to delete artefact {digest}: {response.text}")
         return False
 
 def main():
+    """Main function to manage deprecation of Harbor base images.
+
+    - Lists all repositories defined in CONFIG var.
+    - Processes each artefact older than 6 months:
+        - Copies the artefact to the deprecated repository.
+        - Deletes the artefact from the source repository.
+    """
     try:
         username = ROBOT_DEPRECATION_ACCOUNT_USERNAME
         password = ROBOT_DEPRECATION_ACCOUNT_SECRET
 
-        # Fetch ska-base-images
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        images_dir = os.path.join(script_dir, os.pardir, "images")
-        images_dir = os.path.abspath(images_dir)
-        images = [f for f in os.listdir(images_dir) if os.path.isdir(os.path.join(images_dir, f))]
-        logging.info(f"Base image name: {images}")
-
-        for image in images:
-            artifacts = list_artifacts(username, password, image)
-            if len(artifacts) <= 1:
-                logging.info(f"Skipping repository {image} as it contains only one artifact.")
+        for image in IMAGES:
+            artefacts = list_artefacts(username, password, image)
+            if len(artefacts) <= 1:
+                logging.info(f"Skipping repository {image} as it contains only one artefact and we don't want to remove it.")
                 continue
-            for artifact in artifacts:
-                digest = artifact["digest"]
-                created_at = datetime.strptime(artifact["push_time"], "%Y-%m-%dT%H:%M:%S.%fZ")
+            for artefact in artefacts:
+                digest = artefact["digest"]
+                created_at = datetime.strptime(artefact["push_time"], "%Y-%m-%dT%H:%M:%S.%fZ")
 
-                if created_at < SIX_MONTHS_AGO:
-                    logging.info(f"Processing artifact {digest}, created at {created_at}...")
-
-                    if copy_artifact(username, password, image, digest):
-                        add_new_tag(username, password, image, digest, artifact)
-                        if delete_artifact(username, password, image, digest):
-                            logging.info(f"Artifact {digest} successfully moved to {PROJECT}/{DEST_REPO}.")
+                if created_at < DEPRECATION_PERIOD:
+                    logging.info(
+                        f"Processing artifact from image '{image}' with digest '{digest}', created at '{created_at}'..."
+                    )
+                    if copy_artefact(username, password, image, digest):
+                        if delete_artefact(username, password, image, digest):
+                            logging.info(f"Artefact {digest} successfully moved to {DEST_PROJECT}/{image}.")
                         else:
-                            logging.warning(f"Failed to delete artifact {digest} after copying.")
+                            logging.warning(f"Failed to delete artefact {digest} after copying.")
                     else:
                         logging.warning(f"Skipping deletion of {digest} due to copy failure.")
                 else:
-                    logging.info(f"Skipping artifact {digest} as it is less than 6 months old.")
-
+                    logging.info(f"Skipping artefact {digest} as it is less than 6 months old.")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         raise
