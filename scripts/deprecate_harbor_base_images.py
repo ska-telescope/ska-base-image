@@ -12,7 +12,7 @@ Required Environment Variables:
 - HARBOR_DEPRECATION_PROJECT: The name of the project where images will be deprecated to.
 - ROBOT_DEPRECATION_ACCOUNT_USERNAME: Username for authentication.
 - ROBOT_DEPRECATION_ACCOUNT_SECRET: Token for authentication.
-- CONFIG: A JSON-formatted string that defines the deprecation time span (in days) and
+- DEPRECATION_CONFIG: A JSON-formatted string that defines the deprecation time span (in days) and
 the list of base images to be deprecated.
 """
 
@@ -123,7 +123,7 @@ def main():
         for image in IMAGES:
             artefacts = list_artefacts(username, password, image)
             if len(artefacts) <= 1:
-                logging.info(f"Skipping repository {image} as it contains only one artefact and we don't want to remove it.")
+                logging.info(f"Skipping repository {image} as it contains only one artefact and should not be removed.")
                 continue
             for artefact in artefacts:
                 digest = artefact["digest"]
