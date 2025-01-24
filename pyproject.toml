@@ -4,6 +4,7 @@ version = "0.1.3"
 description = ""
 authors = ["Matteo Di Carlo <matteo.dicarlo@inaf.it>"]
 readme = "README.md"
+package-mode = false
 
 [[tool.poetry.source]]
 name = 'ska-nexus'
@@ -14,6 +15,7 @@ name = "PyPI"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+requests = "^2.32.3"
 
 [tool.poetry.group.docs.dependencies]
 myst-parser = "^4.0.0"
