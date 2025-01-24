@@ -215,6 +215,20 @@ docs-build:
     - cp -r build/reports/. docs/src/reports/_static
     - make docs-build html
 
+pages:
+  variables:
+    DOCS_SPHINXOPTS: "-t on_gitlab"
+  needs:
+    - oval-check-ska-base
+    - ssg-check-ska-base
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  script:
+    - cp -r build/reports/. docs/src/reports/_static
+    - make docs-build html
+    - mv docs/build/html/ public
+    - echo "GitLab pages at $CI_PAGES_URL"
+
 deprecate-images:
   stage: schedule
   rules:
