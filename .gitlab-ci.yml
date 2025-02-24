@@ -49,7 +49,6 @@ include:
     - "[ -f .make/oci.mk ] || exit 1"
     - "make help | grep oci-build"
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
-    #- echo $CAR_OCI_REGISTRY_PASSWORD | docker login -u $CAR_OCI_REGISTRY_USERNAME --password-stdin $CAR_OCI_REGISTRY_HOST
   script: |
       # 
       if [[ -n "${BASE_IMAGE_NAME}" ]]; then
@@ -112,6 +111,39 @@ oci-image-build-ska-build:
     OCI_IMAGE: ska-build
     BASE_IMAGE_NAME: ska-base
 
+oci-image-build-ska-node:
+  needs:
+    - oci-image-build-ska-base
+  extends:
+    - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  variables:
+    OCI_IMAGE: ska-node
+    BASE_IMAGE_NAME: ska-base
+
+oci-image-build-ska-node-build:
+  needs:
+    - oci-image-build-ska-node
+  extends:
+    - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  variables:
+    OCI_IMAGE: ska-node-build
+    BASE_IMAGE_NAME: ska-node
+
+oci-image-build-ska-node-test:
+  needs:
+    - oci-image-build-ska-node
+  extends:
+    - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  variables:
+    OCI_IMAGE: ska-node-test
+    BASE_IMAGE_NAME: ska-node
+
 oci-image-build-ska-python:
   needs:
     - oci-image-build-ska-base
@@ -142,7 +174,7 @@ test-ska-base:
     - ska-default
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:${CI_COMMIT_SHORT_SHA}
   script:
-    - apt-get -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt-get --assume-no upgrade | grep "0 not upgraded."
+    - apt -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt --assume-no upgrade | grep "0 not upgraded."
 
 test-ska-build:
   stage: test
@@ -154,6 +186,16 @@ test-ska-build:
     - pip help
     - g++ --version
     - python3-config --help
+
+test-ska-node:
+  stage: test
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-node:${CI_COMMIT_SHORT_SHA}
+  script:
+    - node --version
+    - npm --version
+    - yarn --version
 
 # Usin natively on the image as it doesn't understand that is a container and checks Kernel "based"
 # vulnerabilites, which gives us extra information on the Host as well

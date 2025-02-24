@@ -7,10 +7,10 @@ LABEL int.skao.image.team="Systems Team" \
 
 USER root
 
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends ca-certificates && \
-    apt-get clean && \
+RUN apt update && \
+    apt upgrade -y && \
+    apt install -y --no-install-recommends ca-certificates && \
+    apt clean && \
     rm -fr /var/lib/apt/lists/*
 
 # CIS Level 2 / STIG remediations
