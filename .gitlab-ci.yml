@@ -148,6 +148,17 @@ oci-image-build-ska-node-test:
     OCI_IMAGE: ska-node-test
     BASE_IMAGE_NAME: ska-node
 
+oci-image-build-ska-webserver:
+  needs:
+    - oci-image-build-ska-node
+  extends:
+    - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  variables:
+    OCI_IMAGE: ska-webserver
+    BASE_IMAGE_NAME: ska-node
+
 oci-image-build-ska-python:
   needs:
     - oci-image-build-ska-base
@@ -200,6 +211,15 @@ test-ska-node:
     - node --version
     - npm --version
     - yarn --version
+
+test-ska-webserver:
+  stage: test
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-webserver:${CI_COMMIT_SHORT_SHA}
+  script:
+    - node --version
+    - nginx -version
 
 # Usin natively on the image as it doesn't understand that is a container and checks Kernel "based"
 # vulnerabilites, which gives us extra information on the Host as well

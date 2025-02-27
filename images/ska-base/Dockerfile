@@ -11,8 +11,8 @@ USER root
 
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends ca-certificates && \
-    apt clean && \
+    apt install -y --no-install-recommends --no-install-suggests ca-certificates && \
+    apt remove --purge --auto-remove -y && \
     rm -fr /var/lib/apt/lists/*
 
 # CIS Level 2 / STIG remediations

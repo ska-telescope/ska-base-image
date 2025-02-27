@@ -10,8 +10,8 @@ LABEL int.skao.image.team="Systems Team" \
 COPY skao.metadata /etc/skao.metadata
 
 RUN apt update && \
-    apt install -y --no-install-recommends build-essential git && \
-    apt clean && \
+    apt install -y --no-install-recommends --no-install-suggests build-essential git && \
+    apt remove --purge --auto-remove -y && \
     rm -fr /var/lib/apt/lists/*
 
 CMD ["bash"]

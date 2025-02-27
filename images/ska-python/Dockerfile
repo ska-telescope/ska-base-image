@@ -10,8 +10,8 @@ LABEL int.skao.image.team="Systems Team" \
 COPY skao.metadata /etc/skao.metadata
 
 RUN apt update && \
-    apt install -y python3 python-is-python3 && \
-    apt clean && \
+    apt install -y --no-install-recommends --no-install-suggests python3 python-is-python3 && \
+    apt remove --purge --auto-remove -y && \
     rm -fr /var/lib/apt/lists/*
 
 CMD ["bash"]

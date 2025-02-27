@@ -14,14 +14,13 @@ LABEL int.skao.image.team="Systems Team" \
 COPY skao.metadata /etc/skao.metadata
 
 RUN apt update && \
-    apt install -y curl && \
+    apt install -y --no-install-recommends --no-install-suggests curl && \
     curl -fsSL https://deb.nodesource.com/setup_${NODE_RELEASE}.x -o nodesource.sh && \
     bash -C nodesource.sh  && \
     rm nodesource.sh && \
-    apt install -y nodejs && \
+    apt install -y --no-install-recommends --no-install-suggests nodejs && \
     npm install --global npm@${NPM_VERSION} yarn@${YARN_VERSION} && \ 
-    apt purge -y --auto-remove curl && \
-    apt clean && \
+    apt remove --purge --auto-remove -y curl && \
     rm -fr /var/lib/apt/lists/*
 
 CMD ["bash"]
