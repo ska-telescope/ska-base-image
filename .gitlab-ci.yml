@@ -50,19 +50,19 @@ include:
     - "make help | grep oci-build"
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   script: |
-      # 
-      if [[ -n "${BASE_IMAGE_NAME}" ]]; then
-        export BASE_IMAGE_REGISTRY=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/${BASE_IMAGE_NAME}
-        export BASE_IMAGE=$BASE_IMAGE_REGISTRY
-        echo "Using BASE_IMAGE=${BASE_IMAGE_REGISTRY}"
-        VERSION=$(make show-version RELEASE_CONTEXT_DIR=images/${BASE_IMAGE_NAME})
-        FULL_VERSION="${VERSION}-dev.c${CI_COMMIT_SHORT_SHA}"
-        export BASE_IMAGE_REF="${BASE_IMAGE_NAME}:${VERSION}"
-        export BASE_IMAGE="${BASE_IMAGE}:${FULL_VERSION}"
-      fi
+    # 
+    if [[ -n "${BASE_IMAGE_NAME}" ]]; then
+      export BASE_IMAGE_REGISTRY=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/${BASE_IMAGE_NAME}
+      export BASE_IMAGE=$BASE_IMAGE_REGISTRY
+      echo "Using BASE_IMAGE=${BASE_IMAGE_REGISTRY}"
+      VERSION=$(make show-version RELEASE_CONTEXT_DIR=images/${BASE_IMAGE_NAME})
+      FULL_VERSION="${VERSION}-dev.c${CI_COMMIT_SHORT_SHA}"
+      export BASE_IMAGE_REF="${BASE_IMAGE_NAME}:${VERSION}"
+      export BASE_IMAGE="${BASE_IMAGE}:${FULL_VERSION}"
+    fi
 
-      echo "Image dependencies set to BASE_IMAGE=${BASE_IMAGE}"
-      make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BASE_IMAGE=${BASE_IMAGE} --build-arg BASE_IMAGE_REF=${BASE_IMAGE_REF}"
+    echo "Image dependencies set to BASE_IMAGE=${BASE_IMAGE}"
+    make oci-build OCI_IMAGE=${OCI_IMAGE} CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} RELEASE_CONTEXT_DIR=images/${OCI_IMAGE} OCI_BUILD_ADDITIONAL_ARGS="--no-cache --build-arg BASE_IMAGE=${BASE_IMAGE} --build-arg BASE_IMAGE_REF=${BASE_IMAGE_REF}"
 
 .override-jobs-for-schedule:
   rules:
@@ -88,7 +88,7 @@ gemnasium-python-dependency_scanning:
 
 create-ci-metrics:
   rules:
-    - !reference [.override-jobs-for-schedule, rules]       
+    - !reference [.override-jobs-for-schedule, rules]
 
 oci-image-build:
   rules:
@@ -221,7 +221,25 @@ test-ska-webserver:
     - node --version
     - nginx -version
 
-# Usin natively on the image as it doesn't understand that is a container and checks Kernel "based"
+scan-ska-python:
+  extends:
+    - container_scanning
+  variables:
+    BASE_IMAGE_NAME: $CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/ska-python:$CI_COMMIT_SHORT_SHA
+
+scan-ska-node:
+  extends:
+    - container_scanning
+  variables:
+    BASE_IMAGE_NAME: $CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/ska-node:$CI_COMMIT_SHORT_SHA
+
+scan-ska-webserver:
+  extends:
+    - container_scanning
+  variables:
+    BASE_IMAGE_NAME: $CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/ska-webserver:$CI_COMMIT_SHORT_SHA
+
+# Using natively on the image as it doesn't understand that is a container and checks Kernel "based"
 # vulnerabilites, which gives us extra information on the Host as well
 oval-check-ska-base:
   stage: build
