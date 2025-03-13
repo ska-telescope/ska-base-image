@@ -7,11 +7,11 @@ LABEL int.skao.image.team="Systems Team" \
     int.skao.image.source="images/ska-node-build/Dockerfile" \
     int.skao.image.baseImage="${BASE_IMAGE_REF}"
 
-COPY skao.metadata /etc/skao.metadata
-
-RUN apt update && \
-    apt install -y --no-install-recommends --no-install-suggests build-essential git && \
-    apt remove --purge --auto-remove -y && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends --no-install-suggests build-essential git && \
+    apt-get remove --purge --auto-remove -y && \
     rm -fr /var/lib/apt/lists/*
+
+COPY skao.metadata /etc/skao.metadata
 
 CMD ["bash"]

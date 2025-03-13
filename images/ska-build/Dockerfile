@@ -9,9 +9,9 @@ LABEL int.skao.image.team="Systems Team" \
 
 ENV POETRY_VERSION=1.8.3
 
-RUN apt update && \
-    apt install -y --no-install-recommends --no-install-suggests build-essential pipx libffi-dev python3-dev curl python-is-python3 python3-pip && \
-    apt remove --purge --auto-remove -y && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends --no-install-suggests build-essential pipx libffi-dev python3-dev curl python-is-python3 python3-pip && \
+    apt-get remove --purge --auto-remove -y && \
     rm -fr /var/lib/apt/lists/*
 
 RUN pipx install poetry==1.8.3

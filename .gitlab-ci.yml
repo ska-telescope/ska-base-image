@@ -101,8 +101,6 @@ oci-image-build-ska-base:
     - !reference [.override-jobs-for-schedule, rules]
   variables:
     OCI_IMAGE: ska-base
-    BASE_IMAGE: ubuntu:22.04
-    BASE_IMAGE_REF: ubuntu:22.04
 
 oci-image-build-ska-build:
   needs:
@@ -189,7 +187,7 @@ test-ska-base:
     - ska-default
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:${CI_COMMIT_SHORT_SHA}
   script:
-    - apt -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt --assume-no upgrade | grep "0 not upgraded."
+    - apt-get -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt-get --assume-no upgrade | grep "0 not upgraded."
 
 test-ska-build:
   stage: test
@@ -249,8 +247,8 @@ oval-check-ska-base:
     - !reference [.override-jobs-for-schedule, rules]
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-base:$CI_COMMIT_SHORT_SHA
   script: |
-    apt update && \
-    apt install -y curl libopenscap8 bzip2 unzip && \
+    apt-get update && \
+    apt-get install -y curl libopenscap8 bzip2 unzip && \
     curl -L "https://security-metadata.canonical.com/oval/com.ubuntu.${UBUNTU_DISTRO}.usn.oval.xml.bz2" -o oval.xml.bz2 && \
     bunzip2 oval.xml.bz2
 
