@@ -102,61 +102,6 @@ oci-image-build-ska-base:
   variables:
     OCI_IMAGE: ska-base
 
-oci-image-build-ska-build:
-  needs:
-    - oci-image-build-ska-base
-  extends:
-    - .image_builder_template
-  rules:
-    - !reference [.override-jobs-for-schedule, rules]
-  variables:
-    OCI_IMAGE: ska-build
-    BASE_IMAGE_NAME: ska-base
-
-oci-image-build-ska-node:
-  needs:
-    - oci-image-build-ska-base
-  extends:
-    - .image_builder_template
-  rules:
-    - !reference [.override-jobs-for-schedule, rules]
-  variables:
-    OCI_IMAGE: ska-node
-    BASE_IMAGE_NAME: ska-base
-
-oci-image-build-ska-node-build:
-  needs:
-    - oci-image-build-ska-node
-  extends:
-    - .image_builder_template
-  rules:
-    - !reference [.override-jobs-for-schedule, rules]
-  variables:
-    OCI_IMAGE: ska-node-build
-    BASE_IMAGE_NAME: ska-node
-
-oci-image-build-ska-node-test:
-  needs:
-    - oci-image-build-ska-node
-  extends:
-    - .image_builder_template
-  rules:
-    - !reference [.override-jobs-for-schedule, rules]
-  variables:
-    OCI_IMAGE: ska-node-test
-    BASE_IMAGE_NAME: ska-node
-
-oci-image-build-ska-webserver:
-  needs:
-    - oci-image-build-ska-node
-  extends:
-    - .image_builder_template
-  rules:
-    - !reference [.override-jobs-for-schedule, rules]
-  variables:
-    OCI_IMAGE: ska-webserver
-    BASE_IMAGE_NAME: ska-node
-
 oci-image-build-ska-python:
   needs:
     - oci-image-build-ska-base
@@ -170,14 +115,47 @@ oci-image-build-ska-python:
 
 oci-image-build-ska-build-python:
   needs:
-    - oci-image-build-ska-build
+    - oci-image-build-ska-python
   extends:
     - .image_builder_template
   rules:
     - !reference [.override-jobs-for-schedule, rules]
   variables:
     OCI_IMAGE: ska-build-python
-    BASE_IMAGE_NAME: ska-build
+    BASE_IMAGE_NAME: ska-python
+
+oci-image-build-ska-node:
+  needs:
+    - oci-image-build-ska-base
+  extends:
+    - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  variables:
+    OCI_IMAGE: ska-node
+    BASE_IMAGE_NAME: ska-base
+
+oci-image-build-ska-build-node:
+  needs:
+    - oci-image-build-ska-node
+  extends:
+    - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  variables:
+    OCI_IMAGE: ska-build-node
+    BASE_IMAGE_NAME: ska-node
+
+oci-image-build-ska-webserver:
+  needs:
+    - oci-image-build-ska-node
+  extends:
+    - .image_builder_template
+  rules:
+    - !reference [.override-jobs-for-schedule, rules]
+  variables:
+    OCI_IMAGE: ska-webserver
+    BASE_IMAGE_NAME: ska-node
 
 test-ska-base:
   stage: test
@@ -189,26 +167,30 @@ test-ska-base:
   script:
     - apt-get -o Dir::Etc::sourcelist="secsrc.list" -o Dir::Etc::sourceparts="-" update && apt-get --assume-no upgrade | grep "0 not upgraded."
 
-test-ska-build:
+test-ska-build-python:
   stage: test
   rules:
     - !reference [.override-jobs-for-schedule, rules]
-  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build:${CI_COMMIT_SHORT_SHA}
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build-python:${CI_COMMIT_SHORT_SHA}
   script:
+    - make --version
+    - git --version
+    - g++ --version
     - python3 --version
     - pip help
-    - g++ --version
-    - python3-config --help
 
-test-ska-node:
+test-ska-build-node:
   stage: test
   rules:
     - !reference [.override-jobs-for-schedule, rules]
-  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-node:${CI_COMMIT_SHORT_SHA}
+  image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-build-node:${CI_COMMIT_SHORT_SHA}
   script:
+    - make --version
+    - git --version
     - node --version
     - npm --version
     - yarn --version
+    - cypress info
 
 test-ska-webserver:
   stage: test
