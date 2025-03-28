@@ -9,12 +9,9 @@ entrypoint_log() {
     fi
 }
 
-CONF_ENV_VARS='${NGINX_WORKER_PROCESSES} ${NGINX_WORKER_CONNECTIONS} ${NGINX_LOG_LEVEL} ${NGINX_PORT} ${NGINX_SERVER_NAME} ${NGINX_STATIC_FILE_CACHE_EXPIRATION} ${NGINX_ROOT}'
-
 if [ "$1" = "nginx" ] || [ "$1" = "nginx-debug" ]; then
     entrypoint_log "$0: Generating nginx.conf"
     TEMPLATE_DIR="${NGINX_ENVSUBST_TEMPLATE_DIR:-/etc/nginx/templates}"
-    envsubst "$CONF_ENV_VARS" < "${TEMPLATE_DIR}/nginx.conf.tpl" > /etc/nginx/nginx.conf
 
     if /usr/bin/find "/docker-entrypoint.d/" -mindepth 1 -maxdepth 1 -type f -print -quit 2>/dev/null | read v; then
         entrypoint_log "$0: /docker-entrypoint.d/ is not empty, will attempt to perform configuration"
@@ -48,6 +45,8 @@ if [ "$1" = "nginx" ] || [ "$1" = "nginx-debug" ]; then
     else
         entrypoint_log "$0: No files found in /docker-entrypoint.d/, skipping configuration"
     fi
+
+    python3 -u ${TEMPLATE_DIR}/generate.py -i ${TEMPLATE_DIR}/nginx.conf.j2 -o /etc/nginx/nginx.conf -c ${TEMPLATE_DIR}/conf.d
 fi
 
 exec "$@"

@@ -1,0 +1,8 @@
+config:
+  root: "/usr/share/nginx/html"
+  worker_processes: "auto"
+  worker_connections: 1024
+  log_level: warn
+  port: 80
+  server_name: _
+  static_file_cache_expiration: 7d

@@ -148,14 +148,14 @@ oci-image-build-ska-build-node:
 
 oci-image-build-ska-webserver:
   needs:
-    - oci-image-build-ska-node
+    - oci-image-build-ska-python
   extends:
     - .image_builder_template
   rules:
     - !reference [.override-jobs-for-schedule, rules]
   variables:
     OCI_IMAGE: ska-webserver
-    BASE_IMAGE_NAME: ska-node
+    BASE_IMAGE_NAME: ska-python
 
 test-ska-base:
   stage: test
@@ -198,7 +198,6 @@ test-ska-webserver:
     - !reference [.override-jobs-for-schedule, rules]
   image: ${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/ska-webserver:${CI_COMMIT_SHORT_SHA}
   script:
-    - node --version
     - nginx -version
 
 scan-ska-python:

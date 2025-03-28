@@ -38,6 +38,7 @@ pytest-logs.txt
 manifests.yaml
 .DS_Store
 .DS_Store
+local_config.y*ml
 
 /values.y*ml
 skao.metadata

@@ -1,12 +1,12 @@
 # /etc/nginx/nginx.conf
 user  nginx;
-worker_processes  ${NGINX_WORKER_PROCESSES};
+worker_processes  {{ config.worker_processes }};
 
-error_log  /var/log/nginx/error.log  ${NGINX_LOG_LEVEL};
+error_log  /var/log/nginx/error.log  {{ config.log_level }};
 pid        /var/run/nginx.pid;
 
 events {
-    worker_connections  ${NGINX_WORKER_CONNECTIONS};
+    worker_connections  {{ config.worker_connections }};
 }
 
 http {
@@ -55,11 +55,11 @@ http {
 
     server {
         # Listen on HTTP
-        listen ${NGINX_PORT};
-        server_name ${NGINX_SERVER_NAME};
+        listen {{ config.port }};
+        server_name {{ config.server_name }};
 
         # Path static content root
-        root ${NGINX_ROOT};
+        root {{ config.root }};
         index index.html index.htm;
 
         # Security headers
@@ -67,9 +67,33 @@ http {
         add_header X-XSS-Protection "1; mode=block";
         add_header X-Frame-Options "SAMEORIGIN";
 
+        include /etc/nginx/conf.d/*.conf;
+
+        {%- if config.snippets is not none %}
+        {{ '' }}
+        {%- for snippet in config.snippets %}
+        {%- filter indent(width=8) %}
+{{ snippet }}
+        {%- endfilter %}
+        {%- endfor %}
+        {%- endif %}
+
+        {%- if config.locations is not none %}
+        {%- for location in config.locations %}
+        location {{ location.proxy_location }} {
+        {%- if location.proxy_upstream_host is not none %}
+            set $proxy_upstream_name {{ location.proxy_upstream_host }};
+        {%- endif %}
+        {%- for key, value in location.proxy_config.items() %}
+            {{ key }} {{ value }};
+        {%- endfor %}
+        }
+        {%- endfor %}
+        {%- endif %}
+
         # Serve static files with caching
         location ~* \.(?:css|js|gif|jpe?g|png|ico|svg|woff2?|ttf|eot)$ {
-            expires ${NGINX_STATIC_FILE_CACHE_EXPIRATION};
+            expires {{ config.static_file_cache_expiration }};
             add_header Pragma public;
             add_header Cache-Control "public";
             try_files $uri =404;
