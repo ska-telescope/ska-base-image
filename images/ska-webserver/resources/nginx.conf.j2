@@ -67,7 +67,9 @@ http {
         add_header X-XSS-Protection "1; mode=block";
         add_header X-Frame-Options "SAMEORIGIN";
 
-        include /etc/nginx/conf.d/*.conf;
+        {%- if config.resolver.address is not none and (config.resolver.address | length) > 0 %}
+        resolver {% for addr in config.resolver.address %}{{ addr }} {% endfor %} valid={{ config.resolver.validity | default('3600s') }};
+        {%- endif %}
 
         {%- if config.snippets is not none %}
         {{ '' }}
@@ -79,12 +81,16 @@ http {
         {%- endif %}
 
         {%- if config.locations is not none %}
-        {%- for location in config.locations %}
-        location {{ location.proxy_location }} {
-        {%- if location.proxy_upstream_host is not none %}
-            set $proxy_upstream_name {{ location.proxy_upstream_host }};
+        {%- for loc in config.locations %}
+        location {{ loc.proxy_location }} {
+        {%- if loc.proxy_upstream_host is not none %}
+            {%- if loc.proxy_resolver and loc.proxy_resolver.address is not none and (loc.proxy_resolver.address | length) > 0 %}
+            resolver {% for addr in loc.proxy_resolver.address %}{{ addr }} {% endfor %} valid={{ loc.proxy_resolver.validity | default('3600s') }};
+            {%- endif %}
+
+            set $proxy_upstream_name {{ loc.proxy_upstream_host }};
         {%- endif %}
-        {%- for key, value in location.proxy_config.items() %}
+        {%- for key, value in loc.proxy_config.items() %}
             {{ key }} {{ value }};
         {%- endfor %}
         }
@@ -96,12 +102,12 @@ http {
             expires {{ config.static_file_cache_expiration }};
             add_header Pragma public;
             add_header Cache-Control "public";
-            try_files $uri =404;
+            try_files $uri $uri/ =404;
         }
 
         # Default location for static files
         location / {
-            try_files $uri $uri/ =404;
+            try_files $uri $uri/ /index.html =404;
         }
     }
 }

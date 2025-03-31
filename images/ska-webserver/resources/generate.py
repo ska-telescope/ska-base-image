@@ -6,6 +6,7 @@ proxy calls to backends.
 """
 
 import argparse
+import copy
 import ipaddress
 import logging
 import os
@@ -13,7 +14,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import yaml
-from deepmerge import always_merger
+from deepmerge import Merger
 from jinja2 import Template
 
 LOGGING_FORMAT = (
@@ -29,6 +30,16 @@ logging.basicConfig(
 DEFAULT_INPUT_PATH = "/etc/nginx/templates/nginx.conf.j2"
 DEFAULT_OUTPUT_PATH = "/etc/nginx/nginx.conf"
 DEFAULT_CONFIG_PATH = "/etc/nginx/templates/config.yml"
+
+MERGER = Merger(
+    [
+        (list, "override"),
+        (dict, "merge"),
+        (set, "union"),
+    ],
+    ["override"],
+    ["override"],
+)
 
 DEFAULT_PROXY_CONFIG = {
     # Use HTTP/1.1 to support keep-alive and WebSocket upgrades if needed
@@ -93,9 +104,9 @@ it is not readable",
     for file in cliargs.config.glob("*.y*ml"):
         with open(file, "r", encoding="utf-8") as config_file:
             logging.info("Parsing configurations from '%s'", file)
-            config = always_merger.merge(config, yaml.safe_load(config_file))
+            config = MERGER.merge(config, yaml.safe_load(config_file))
 
-    config = always_merger.merge(
+    config = MERGER.merge(
         config,
         {
             "env": {
@@ -118,6 +129,7 @@ it is not readable",
         )
 
     sanitized_locations = []
+    default_resolver = config.get("config", {}).get("resolver", {})
     for loc in config.get("config", {}).get("locations", []):
         name = loc["location"]
         del loc["location"]
@@ -136,11 +148,21 @@ it is not readable",
             port = f":{upstream_port}" if upstream_port else ""
             loc["proxy_pass"] = f"{scheme}://$proxy_upstream_name{port}{path}"
 
+        proxy_resolver = None
+        if "resolver" in loc:
+            proxy_resolver = MERGER.merge(
+                copy.deepcopy(default_resolver), loc["resolver"]
+            )
+            del loc["resolver"]
+
         sanitized_locations.append(
             {
                 "proxy_location": name,
                 "proxy_upstream_host": upstream_host,
-                "proxy_config": always_merger.merge(DEFAULT_PROXY_CONFIG, loc),
+                "proxy_resolver": proxy_resolver,
+                "proxy_config": MERGER.merge(
+                    copy.deepcopy(DEFAULT_PROXY_CONFIG), loc
+                ),
             }
         )
 

@@ -6,3 +6,7 @@ config:
   port: 80
   server_name: _
   static_file_cache_expiration: 7d
+  resolver:
+    validity: 300s
+    address:
+      - kube-dns.kube-system.svc
